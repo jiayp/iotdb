@@ -43,21 +43,20 @@ public class TsFileResourceList implements List<TsFileResource> {
   /**
    * Insert a new node before an existing node
    *
-   * @param node the existing node
+   * @param succ the existing node
    * @param newNode the file to insert
    */
-  public void insertBefore(TsFileResource node, TsFileResource newNode) {
-    if (newNode.equals(node)) {
+  public void insertBefore(TsFileResource succ, TsFileResource newNode) {
+    if (newNode.equals(succ)) {
       return;
     }
-    newNode.prev = node.prev;
-    newNode.next = node;
-    if (node.prev == null) {
+    TsFileResource pred = succ.prev;
+    succ.prev = newNode;
+    if (pred == null) {
       header = newNode;
     } else {
-      node.prev.next = newNode;
+      pred.next = newNode;
     }
-    node.prev = newNode;
     count++;
   }
 
@@ -68,12 +67,13 @@ public class TsFileResourceList implements List<TsFileResource> {
    * @param newNode the file to insert
    */
   public void insertAfter(TsFileResource node, TsFileResource newNode) {
+    TsFileResource p = node.next;
     newNode.prev = node;
     newNode.next = node.next;
-    if (node.next == null) {
+    if (p == null) {
       tail = newNode;
     } else {
-      node.next.prev = newNode;
+      p.prev = newNode;
     }
     node.next = newNode;
     count++;
@@ -122,13 +122,14 @@ public class TsFileResourceList implements List<TsFileResource> {
       // this node already in a list
       return false;
     }
-    if (tail == null) {
+    final TsFileResource t = tail;
+    tail = newNode;
+    if (t == null) {
       header = newNode;
-      tail = newNode;
-      count++;
     } else {
-      insertAfter(tail, newNode);
+      t.next = newNode;
     }
+    count++;
     return true;
   }
 
@@ -191,37 +192,40 @@ public class TsFileResourceList implements List<TsFileResource> {
    */
   @Override
   public boolean remove(Object o) {
-    TsFileResource tsFileResource = (TsFileResource) o;
-    if (!contains(o)) {
-      // the tsFileResource does not exist in this list
+    if (!(o instanceof TsFileResource)) {
       return false;
     }
-    if (tsFileResource.prev == null) {
-      // remove header
-      header = header.next;
-      if (header != null) {
-        header.prev = null;
-      } else {
-        // if list contains only one item, remove the header and the tail
-        tail = null;
+    TsFileResource curr = header;
+    TsFileResource target = (TsFileResource) o;
+    while (curr != null) {
+      if (curr.equals(target)) {
+        unlink(target);
+        return true;
       }
-    } else if (tsFileResource.next == null) {
-      // remove tail
-      tail = tail.prev;
-      if (tail != null) {
-        tail.next = null;
-      } else {
-        // if list contains only one item, remove the header and the tail
-        header = null;
-      }
-    } else {
-      tsFileResource.prev.next = tsFileResource.next;
-      tsFileResource.next.prev = tsFileResource.prev;
+      curr = curr.next;
     }
-    tsFileResource.prev = null;
-    tsFileResource.next = null;
+    return false;
+  }
+
+  private void unlink(TsFileResource x) {
+    TsFileResource next = x.next;
+    TsFileResource prev = x.prev;
+
+    if (prev == null) {
+      header = next;
+    } else {
+      prev.next = next;
+      x.prev = null;
+    }
+
+    if (next == null) {
+      tail = prev;
+    } else {
+      next.prev = prev;
+      x.next = null;
+    }
+
     count--;
-    return true;
   }
 
   @Override
@@ -243,6 +247,14 @@ public class TsFileResourceList implements List<TsFileResource> {
 
   @Override
   public void clear() {
+    TsFileResource curr = header;
+    TsFileResource next;
+    while (curr != null) {
+      curr.prev = null;
+      next = curr.next;
+      curr.next = null;
+      curr = next;
+    }
     header = null;
     tail = null;
     count = 0;
@@ -296,13 +308,13 @@ public class TsFileResourceList implements List<TsFileResource> {
   public TsFileResource set(int index, TsFileResource element) {
     int currIndex = 0;
     TsFileResource currTsFileResource = header;
-    if (header == null && index > 0) {
+    if (index >= count) {
       throw new ArrayIndexOutOfBoundsException(index);
     }
     while (currIndex != index) {
       if (currTsFileResource.next == null) {
         if (currIndex == index - 1) {
-          insertAfter(currTsFileResource, element);
+          add(element);
           return element;
         } else {
           throw new ArrayIndexOutOfBoundsException(currIndex);

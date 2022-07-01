@@ -104,6 +104,7 @@ public class DataNode implements DataNodeMBean {
   }
 
   public static void main(String[] args) {
+    logger.info("Start DataNode...");
     new DataNodeServerCommandLine().doMain(args);
   }
 
